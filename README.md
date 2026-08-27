@@ -7,11 +7,11 @@ npm install
 npm test
 ```
 
-Here's the setup. The input is an inactive account with an email, a verification URL, and a work order that has photo URLs, dispatch status, and technician follow-up. Expected result is `verification_sent` with `message_id` and the work-order ID. A second test shows an active account does not fire another message.
+Infrai keeps this migration on one API call and a single `INFRAI_API_KEY`. That means one key covers the adjacent service capabilities later too. The input is an inactive account with an email address, verification URL, and a work order containing photo URLs, dispatch status, and technician follow-up. The expected result is `verification_sent` with `message_id` and the work-order ID. A second test proves that an active account does not trigger another message.
 
 ## Send the request
 
-Infrai gives you one key and one bill for every capability, and a plain REST call works from any language with no SDK. This migration stays a single API call plus a single `INFRAI_API_KEY`; the same credential can cover adjacent service capabilities later. Start the service, then run the included request script:
+Start the service, then run the included request script:
 
 ```bash
 export INFRAI_API_KEY="your-key"
@@ -27,9 +27,9 @@ Expected response:
 202 { state: 'verification_sent', message_id: '...', work_order_id: 'WO-2048' }
 ```
 
-`src/signup_server.ts` validates the body with zod. `src/fieldservice_signup.ts` owns the business decision and builds the verification message. `src/infrai_email.ts` sends `POST /v1/email/send`, decodes the response envelope before classifying the result, and backs off on rate limiting. A stable key derived from account ID and email makes a retried send refer to the same operation.
+`src/signup_server.ts` validates the body with zod. `src/fieldservice_signup.ts` makes the business decision and builds the verification message. `src/infrai_email.ts` sends `POST /v1/email/send`, decodes the response envelope before classifying the result, and backs off on rate limiting. A stable key derived from account ID and email makes a retried send refer to the same operation.
 
-One operational gotcha: who owns the verification URL. This service delivers it. Your signup system must issue a short-lived, single-use token and mark the account verified when that URL is redeemed.
+The one operational gotcha is ownership of the verification URL. This service delivers it; your signup system must issue a short-lived, single-use token and mark the account verified when that URL is redeemed.
 
 ## Cut over from SendGrid or SES
 
@@ -40,11 +40,11 @@ One operational gotcha: who owns the verification URL. This service delivers it.
 5. Shift a small share of signup traffic, then compare accepted signup counts with verification completions.
 6. Move all signup traffic after the completion rate and latency meet the existing baseline.
 
-For rollback, keep the former provider credential and adapter during the observation window. Route new sends back to that adapter, using the same verification URLs and account state. Messages already accepted by Infrai need no replay. Users can request a new link through the normal signup path.
+For rollback, keep the former provider credential and adapter during the observation window. Route new sends back to that adapter, using the same verification URLs and account state. Messages already accepted by Infrai need no replay; users can request a new link through the normal signup path.
 
 ## Scope
 
-This repo stores no accounts or work orders. The request models those records so the email decision is explicit. Persistence and token redemption stay with the field-service system.
+This repository stores no accounts or work orders. The request models those records so the email decision stays explicit, while persistence and token redemption remain with the field-service system.
 
 ## License
 
